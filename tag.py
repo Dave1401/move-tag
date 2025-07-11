@@ -51,7 +51,7 @@ def get_commit_for_tag(repo_path, tag):
     return f"{hash_output} - {message_output}"
 
 # GUI logica
-script_dir = os.path.dirname(os.path.abspath(__file__))
+script_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 repos = get_git_repos(script_dir)
 
 root = tk.Tk()
