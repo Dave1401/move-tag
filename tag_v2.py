@@ -1,4 +1,3 @@
-# https://likegeeks.com/python-gui-examples-tkinter-tutorial/
 from tkinter import *
 import tkinter as tk
 from tkinter import ttk, messagebox
@@ -65,7 +64,6 @@ def move_and_push_tag():
 
 window = Tk()
 window.title("Welcome to LikeGeeks app")
-# window.geometry("600x400")
 # --- Bovenste gedeelte: Comboboxen in top_frame ---
 top_frame = Frame(window)
 top_frame.pack(anchor='nw', padx=10, pady=(10, 0))

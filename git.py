@@ -17,15 +17,12 @@ def run_git_command(repo_path, args):
 def get_git_repos(base_path):
     def is_git_repo(path):
         is_git = os.path.isdir(os.path.join(path, ".git"))
-        #print(f"Checking if {path} is a git repo -> {is_git}")
         return is_git
     repos = [d for d in os.listdir(base_path) if is_git_repo(os.path.join(base_path, d))]
-    #print(f"Getting git repos in {base_path} -> {repos} found")
     return repos
 
 def get_branches(repo_path):
     output = run_git_command(repo_path, ["branch", "-a", "--format=%(refname:short)"])
-    #print(f"Branches in {repo_path}: {output}")
     return [b.strip() for b in output.splitlines() if b] if not output.startswith("ERROR") else []
 
 def get_commits(repo_path, branch):
