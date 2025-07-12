@@ -1,7 +1,7 @@
 # https://likegeeks.com/python-gui-examples-tkinter-tutorial/
 from tkinter import *
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, messagebox
 import os
 import subprocess
 
@@ -52,6 +52,12 @@ def get_commit_for_tag(repo_path, tag):
 def checkout_branch(repo_path, branch):
     return run_git_command(repo_path, ["checkout", branch])
 
+def move_tag(repo_path, tag, commit_hash):
+    return run_git_command(repo_path, ["tag", "-f", tag, commit_hash])
+
+def push_tag(repo_path, tag):
+    return run_git_command(repo_path, ["push", "origin", "-f", tag])
+
 def update_branches(*args):
     repo_path = os.path.join(repos_dir, repo_box.get())
     branch_box['values'] = get_branches(repo_path)
@@ -65,8 +71,6 @@ def update_branches_and_tags(*args):
     update_commit_list()
     tag_box['values'] = tags
     update_tag_commit_display()
-
-
 
 def update_commit_list(*args):
     commit_listbox.delete(0, tk.END)
@@ -82,6 +86,29 @@ def update_tag_commit_display(*args):
     repo_path = os.path.join(repos_dir, repo_box.get())
     commit_info = get_commit_for_tag(repo_path, tag_box.get())
     tag_commit_var.set(commit_info if commit_info else "Onbekende commit")
+
+def copy_tag_commit_to_clipboard():
+    commit_info = tag_commit_var.get()
+    window.clipboard_clear()
+    window.clipboard_append(commit_info)
+    window.update()
+    messagebox.showinfo("Gekopieerd", "Commit-informatie is gekopieerd naar het klembord.")
+
+def move_and_push_tag():
+    repo_path = os.path.join(repos_dir, repo_box.get())
+    tag = tag_box.get()
+    selection = commit_listbox.curselection()
+    if not tag or not selection:
+        messagebox.showwarning("Selectie", "Selecteer een tag en een commit.")
+        return
+    commit_line = commit_listbox.get(selection[0])
+    commit_hash = commit_line.split(" - ")[0]
+    result = move_tag(repo_path, tag, commit_hash)
+    if result.startswith("ERROR"):
+        messagebox.showerror("Fout", result)
+    else:
+        messagebox.showinfo("Succes", f"Tag '{tag}' verplaatst naar: '{commit_line}'")
+        update_tag_commit_display()
 
 window = Tk()
 window.title("Welcome to LikeGeeks app")
@@ -121,15 +148,16 @@ frame_tag_info.pack(anchor='nw', padx=0)
 ttk.Label(frame_tag_info, text="Commit van geselecteerde tag:").pack(anchor='w', padx=5, pady=(0, 5))
 tag_commit_info = ttk.Entry(frame_tag_info, textvariable=tag_commit_var, width=80, state="readonly")
 tag_commit_info.pack(anchor='w', padx=5)
-ttk.Button(frame_tag_info, text="📋 Kopieer").pack(anchor='w', padx=5)
+ttk.Button(frame_tag_info, text="📋 Kopieer", command=copy_tag_commit_to_clipboard).pack(anchor='w', padx=5)
 
 # --- Onderste gedeelte: Listbox in apart frame ---
 bottom_frame = Frame(window)
 bottom_frame.pack(anchor='nw', padx=10, pady=10)
 
-ttk.Label(bottom_frame, text="list:").pack(anchor='w', padx=5, pady=(0, 5))
+ttk.Label(bottom_frame, text="commits in branch:").pack(anchor='w', padx=5, pady=(0, 5))
 commit_listbox = Listbox(bottom_frame, width=80, height=10)
 commit_listbox.pack(anchor='w', padx=5)
-ttk.Button(bottom_frame, text="Move and push tag").pack(anchor='w', padx=5, pady=(5, 0))
+
+ttk.Button(bottom_frame, text="Move and push tag", command=move_and_push_tag).pack(anchor='w', padx=5, pady=(5, 0))
 
 window.mainloop()
