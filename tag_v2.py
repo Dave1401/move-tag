@@ -66,17 +66,16 @@ def update_branches_and_tags(*args):
     pull_repo(repo_path)
     branches = get_branches(repo_path)
     tags = get_tags(repo_path)
-
+    
     branch_box['values'] = branches
     update_commit_list()
-    tag_box['values'] = tags
+    tag_box['values'] = [t for t in tags if "env" in t]
     update_tag_commit_display()
 
 def update_commit_list(*args):
     commit_listbox.delete(0, tk.END)
     repo_path = os.path.join(repos_dir, repo_box.get())
     checkout_branch(repo_path, branch_box.get())
-    pull_repo(repo_path)
     commits = get_commits(repo_path, branch_box.get())
     search_text = search_var.get().lower()
     filtered_commits = [c for c in commits if search_text in c.lower()]
