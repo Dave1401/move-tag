@@ -1,29 +1,135 @@
 # https://likegeeks.com/python-gui-examples-tkinter-tutorial/
 from tkinter import *
-from tkinter import ttk, messagebox
+import tkinter as tk
+from tkinter import ttk
+import os
+import subprocess
 
-def clicked():
-    lbl_repo.configure(text="Button was clicked !!")
+repos_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-def get_git_repos():
-    return ["Repo A", "Repo B", "Repo C"]
+def run_git_command(repo_path, args):
+    try:
+        result = subprocess.run(
+            ["git"] + args,
+            cwd=repo_path,
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        return result.stdout.strip()
+    except subprocess.CalledProcessError as e:
+        return f"ERROR: {e.stderr.strip()}"
+
+def get_git_repos(base_path):
+    def is_git_repo(path):
+        is_git = os.path.isdir(os.path.join(path, ".git"))
+        print(f"Checking if {path} is a git repo -> {is_git}")
+        return is_git
+    repos = [d for d in os.listdir(base_path) if is_git_repo(os.path.join(base_path, d))]
+    print(f"Getting git repos in {base_path} -> {repos} found")
+    return repos
+
+def get_branches(repo_path):
+    output = run_git_command(repo_path, ["branch", "-a", "--format=%(refname:short)"])
+    print(f"Branches in {repo_path}: {output}")
+    return [b.strip() for b in output.splitlines() if b] if not output.startswith("ERROR") else []
+
+def get_commits(repo_path, branch):
+    output = run_git_command(repo_path, ["log", branch, "--pretty=format:%h - %s"])
+    return output.splitlines() if not output.startswith("ERROR") else []
+
+def get_tags(repo_path):
+    output = run_git_command(repo_path, ["tag"])
+    return output.splitlines() if not output.startswith("ERROR") else []
+
+def get_commit_for_tag(repo_path, tag):
+    hash_output = run_git_command(repo_path, ["rev-list", "-n", "1", tag])
+    if hash_output.startswith("ERROR") or not hash_output:
+        return None
+    message_output = run_git_command(repo_path, ["log", "-1", "--pretty=format:%s", hash_output])
+    return f"{hash_output} - {message_output}"
+
+def checkout_branch(repo_path, branch):
+    return run_git_command(repo_path, ["checkout", branch])
+
+def update_branches(*args):
+    repo_path = os.path.join(repos_dir, repo_box.get())
+    branch_box['values'] = get_branches(repo_path)
+
+def update_branches_and_tags(*args):
+    repo_path = os.path.join(repos_dir, repo_box.get())
+    branches = get_branches(repo_path)
+    tags = get_tags(repo_path)
+
+    branch_box['values'] = branches
+    update_commit_list()
+    tag_box['values'] = tags
+    update_tag_commit_display()
+
+
+
+def update_commit_list(*args):
+    commit_listbox.delete(0, tk.END)
+    repo_path = os.path.join(repos_dir, repo_box.get())
+    checkout_branch(repo_path, branch_box.get())
+    commits = get_commits(repo_path, branch_box.get())
+    search_text = search_var.get().lower()
+    filtered_commits = [c for c in commits if search_text in c.lower()]
+    for commit in filtered_commits:
+        commit_listbox.insert(tk.END, commit)
+
+def update_tag_commit_display(*args):
+    repo_path = os.path.join(repos_dir, repo_box.get())
+    commit_info = get_commit_for_tag(repo_path, tag_box.get())
+    tag_commit_var.set(commit_info if commit_info else "Onbekende commit")
 
 window = Tk()
-
 window.title("Welcome to LikeGeeks app")
-window.geometry('350x200')
+# window.geometry("600x400")
+# --- Bovenste gedeelte: Comboboxen in top_frame ---
+top_frame = Frame(window)
+top_frame.pack(anchor='nw', padx=10, pady=(10, 0))
 
-top_frame = ttk.Frame(window)
-top_frame.pack(fill='x')
+search_var = tk.StringVar()
+tag_commit_var = tk.StringVar()
 
-ttk.Label(top_frame, text="select repo:").grid(column=0, row=0)
-repo_box = ttk.Combobox(window, values=get_git_repos(), state="readonly")
-repo_box.pack()
+# Combobox 1
+ttk.Label(top_frame, text="select Git repo:").grid(column=0, row=0, sticky='w', padx=5, pady=5)
+repo_box = ttk.Combobox(top_frame, values=get_git_repos(repos_dir), state="readonly")
+repo_box.grid(column=1, row=0, sticky='w')
+repo_box.bind("<<ComboboxSelected>>", update_branches_and_tags)
 
+# Combobox 2
+ttk.Label(top_frame, text="select branch:").grid(column=0, row=1, sticky='w', padx=5, pady=5)
+branch_box = ttk.Combobox(top_frame, values=get_branches(os.path.join(repos_dir, repo_box.get())), state="readonly")
+branch_box.grid(column=1, row=1, sticky='w')
+branch_box.bind("<<ComboboxSelected>>", update_commit_list)
 
-btn = ttk.Button(top_frame, text="Click Me", command=clicked)
-btn.grid(column=1, row=0)
+ttk.Label(top_frame, text="Search for commit:").grid(row=0, column=2, sticky='w',padx=(20,5))
+search_entry = ttk.Entry(top_frame, textvariable=search_var)
+search_entry.grid(row=0, column=3, sticky='w')
+search_var.trace_add("write", lambda *_: update_commit_list())
 
+# Combobox 3
+ttk.Label(top_frame, text="select env tag:").grid(column=0, row=2, sticky='w', padx=5, pady=5)
+tag_box = ttk.Combobox(top_frame, values=get_tags(os.path.join(repos_dir, repo_box.get())), state="readonly")
+tag_box.grid(column=1, row=2, sticky='w')
+tag_box.bind("<<ComboboxSelected>>", update_tag_commit_display)
 
+frame_tag_info = ttk.Frame(window)
+frame_tag_info.pack(anchor='nw', padx=0)
+ttk.Label(frame_tag_info, text="Commit van geselecteerde tag:").pack(anchor='w', padx=5, pady=(0, 5))
+tag_commit_info = ttk.Entry(frame_tag_info, textvariable=tag_commit_var, width=80, state="readonly")
+tag_commit_info.pack(anchor='w', padx=5)
+ttk.Button(frame_tag_info, text="📋 Kopieer").pack(anchor='w', padx=5)
+
+# --- Onderste gedeelte: Listbox in apart frame ---
+bottom_frame = Frame(window)
+bottom_frame.pack(anchor='nw', padx=10, pady=10)
+
+ttk.Label(bottom_frame, text="list:").pack(anchor='w', padx=5, pady=(0, 5))
+commit_listbox = Listbox(bottom_frame, width=80, height=10)
+commit_listbox.pack(anchor='w', padx=5)
+ttk.Button(bottom_frame, text="Move and push tag").pack(anchor='w', padx=5, pady=(5, 0))
 
 window.mainloop()
