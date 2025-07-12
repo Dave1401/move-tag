@@ -23,15 +23,15 @@ def run_git_command(repo_path, args):
 def get_git_repos(base_path):
     def is_git_repo(path):
         is_git = os.path.isdir(os.path.join(path, ".git"))
-        print(f"Checking if {path} is a git repo -> {is_git}")
+        #print(f"Checking if {path} is a git repo -> {is_git}")
         return is_git
     repos = [d for d in os.listdir(base_path) if is_git_repo(os.path.join(base_path, d))]
-    print(f"Getting git repos in {base_path} -> {repos} found")
+    #print(f"Getting git repos in {base_path} -> {repos} found")
     return repos
 
 def get_branches(repo_path):
     output = run_git_command(repo_path, ["branch", "-a", "--format=%(refname:short)"])
-    print(f"Branches in {repo_path}: {output}")
+    #print(f"Branches in {repo_path}: {output}")
     return [b.strip() for b in output.splitlines() if b] if not output.startswith("ERROR") else []
 
 def get_commits(repo_path, branch):
@@ -52,18 +52,18 @@ def get_commit_for_tag(repo_path, tag):
 def checkout_branch(repo_path, branch):
     return run_git_command(repo_path, ["checkout", branch])
 
+def pull_repo(repo_path):
+    return run_git_command(repo_path, ["pull"])
+
 def move_tag(repo_path, tag, commit_hash):
     return run_git_command(repo_path, ["tag", "-f", tag, commit_hash])
 
 def push_tag(repo_path, tag):
     return run_git_command(repo_path, ["push", "origin", "-f", tag])
 
-def update_branches(*args):
-    repo_path = os.path.join(repos_dir, repo_box.get())
-    branch_box['values'] = get_branches(repo_path)
-
 def update_branches_and_tags(*args):
     repo_path = os.path.join(repos_dir, repo_box.get())
+    pull_repo(repo_path)
     branches = get_branches(repo_path)
     tags = get_tags(repo_path)
 
@@ -76,6 +76,7 @@ def update_commit_list(*args):
     commit_listbox.delete(0, tk.END)
     repo_path = os.path.join(repos_dir, repo_box.get())
     checkout_branch(repo_path, branch_box.get())
+    pull_repo(repo_path)
     commits = get_commits(repo_path, branch_box.get())
     search_text = search_var.get().lower()
     filtered_commits = [c for c in commits if search_text in c.lower()]
@@ -103,12 +104,20 @@ def move_and_push_tag():
         return
     commit_line = commit_listbox.get(selection[0])
     commit_hash = commit_line.split(" - ")[0]
-    result = move_tag(repo_path, tag, commit_hash)
-    if result.startswith("ERROR"):
-        messagebox.showerror("Fout", result)
-    else:
-        messagebox.showinfo("Succes", f"Tag '{tag}' verplaatst naar: '{commit_line}'")
-        update_tag_commit_display()
+    response = messagebox.askyesno("Form", f"do you want to continue move the tag '{tag}' to commit '{commit_line}'?", icon ='question')
+    if response:
+        move = move_tag(repo_path, tag, commit_hash)
+        if move.startswith("ERROR"):
+            messagebox.showerror("Fout", move)
+        else:
+            messagebox.showinfo("Succes", f"Tag '{tag}' moved to: '{commit_line}'")
+            update_tag_commit_display()
+
+        push = push_tag(repo_path, tag)
+        if push.startswith("ERROR"):
+            messagebox.showerror("Fout bij pushen", push)
+        else:
+            messagebox.showinfo("Tag gepusht", f"Tag '{tag}' is geforceerd gepusht naar origin.")
 
 window = Tk()
 window.title("Welcome to LikeGeeks app")
