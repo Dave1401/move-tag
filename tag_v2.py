@@ -8,6 +8,7 @@ repos_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 def update_branches_and_tags(*args):
     repo_path = os.path.join(repos_dir, repo_box.get())
     pull_repo(repo_path)
+    fetch(repo_path)
     branches = get_branches(repo_path)
     tags = get_tags(repo_path)
     

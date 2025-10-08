@@ -34,7 +34,7 @@ def get_tags(repo_path):
     return output.splitlines() if not output.startswith("ERROR") else []
 
 def get_commit_for_tag(repo_path, tag):
-    hash_output = run_git_command(repo_path, ["rev-list", "-n", "1", tag])
+    hash_output = run_git_command(repo_path, ["log", "-n", "1", "--pretty=format:%h", tag])
     if hash_output.startswith("ERROR") or not hash_output:
         return None
     message_output = run_git_command(repo_path, ["log", "-1", "--pretty=format:%s", hash_output])
@@ -45,6 +45,9 @@ def checkout_branch(repo_path, branch):
 
 def pull_repo(repo_path):
     return run_git_command(repo_path, ["pull"])
+
+def fetch(repo_path):
+    return run_git_command(repo_path, ["fetch", "--tags", "--all" , "--force"])
 
 def move_tag(repo_path, tag, commit_hash):
     return run_git_command(repo_path, ["tag", "-f", tag, commit_hash])
