@@ -1,6 +1,7 @@
 from tkinter import *
 import tkinter as tk
 from tkinter import ttk, messagebox
+from tkinter.simpledialog import askstring
 from git import *
 
 repos_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -50,7 +51,8 @@ def move_and_push_tag():
     commit_hash = commit_line.split(" - ")[0]
     response = messagebox.askyesno("Form", f"do you want to continue move the tag '{tag}' to commit '{commit_line}'?", icon ='question')
     if response:
-        move = move_tag(repo_path, tag, commit_hash)
+        taggingMessage = askstring('tagging message', 'Give a message for the tagging')
+        move = move_tag(repo_path, tag, commit_hash, taggingMessage)
         if move.startswith("ERROR"):
             messagebox.showerror("Fout", move)
         else:
@@ -64,7 +66,7 @@ def move_and_push_tag():
             messagebox.showinfo("Tag gepusht", f"Tag '{tag}' is geforceerd gepusht naar origin.")
 
 window = Tk()
-window.title("Welcome to LikeGeeks app")
+window.title("Welcome to The Tag Mover")
 # --- Bovenste gedeelte: Comboboxen in top_frame ---
 top_frame = Frame(window)
 top_frame.pack(anchor='nw', padx=10, pady=(10, 0))

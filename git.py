@@ -49,8 +49,8 @@ def pull_repo(repo_path):
 def fetch(repo_path):
     return run_git_command(repo_path, ["fetch", "--tags", "--all" , "--force"])
 
-def move_tag(repo_path, tag, commit_hash):
-    return run_git_command(repo_path, ["tag", "-f", tag, commit_hash])
+def move_tag(repo_path, tag, commit_hash, message):
+    return run_git_command(repo_path, ["tag", "-a", tag, commit_hash, "-f", "-m", message])
 
 def push_tag(repo_path, tag):
     return run_git_command(repo_path, ["push", "origin", "-f", tag])
